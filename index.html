@@ -19,7 +19,7 @@
             <p class="eyebrow">今日の飲酒</p>
             <h1>のみログ</h1>
           </div>
-          <button class="ghost-button" id="resetButton" type="button">リセット</button>
+          <button class="ghost-button" id="finishButton" type="button">終了</button>
         </div>
 
         <section class="counter" aria-live="polite">
@@ -66,6 +66,15 @@
         </div>
         <ol class="history-list" id="historyList"></ol>
         <p class="empty-state" id="emptyState">まだ記録はありません。</p>
+      </section>
+
+      <section class="history-area past-area" aria-labelledby="pastLogsHeading">
+        <div class="section-heading">
+          <h2 id="pastLogsHeading">過去ログ</h2>
+          <span id="pastLogCount">0件</span>
+        </div>
+        <ol class="past-log-list" id="pastLogList"></ol>
+        <p class="empty-state" id="pastEmptyState">終了した飲み会はまだありません。</p>
       </section>
     </main>
 
