@@ -15,6 +15,7 @@
 - ブラウザの `localStorage` に保存
 - 直前の記録を5秒間Undo可能
 - OpenAI APIなしで動くローカルコメント
+- Serverless/Worker経由のAIコメントAPIに対応
 
 ## 使い方
 
@@ -47,3 +48,9 @@ OpenAI APIキーはブラウザ側のJavaScriptに直接埋め込まないでく
 5. コメントを表示
 
 AI通信に失敗しても、飲酒記録は失われない設計にします。
+
+## AIコメントAPI
+
+`api/openai-comment-worker.js` にCloudflare Worker用のサンプルがあります。OpenAI APIキーはWorker側の環境変数 `OPENAI_API_KEY` に設定します。
+
+GitHub Pages側にはAPIキーを置きません。
