@@ -65,6 +65,15 @@ if (!elements.breakdown.innerHTML.includes("ハイボール ×2")) {
 if (!elements.historyList.innerHTML.includes("ハイボール")) {
   throw new Error("history did not render entries");
 }
+
+finishSession();
+if (session.entries.length !== 0) throw new Error("finish did not clear current session");
+if (pastLogs.length !== 1) throw new Error("past log was not saved");
+if (pastLogs[0].totalCount !== 2) throw new Error("past log alcohol count is wrong");
+if (pastLogs[0].waterCount !== 1) throw new Error("past log water count is wrong");
+if (!elements.pastLogList.innerHTML.includes("ハイボール ×2")) {
+  throw new Error("past log breakdown did not render");
+}
 `);
 
 console.log("app flow ok");
