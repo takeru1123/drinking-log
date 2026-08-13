@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#12100f">
+    <meta
+      name="description"
+      content="飲んだお酒を1タップで記録し、飲み過ぎをゆるく注意してくれるスマホ向けWebアプリ。"
+    >
+    <title>のみログ</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div class="hero__top">
+          <div>
+            <p class="eyebrow">今日の飲酒</p>
+            <h1>のみログ</h1>
+          </div>
+          <button class="ghost-button" id="resetButton" type="button">リセット</button>
+        </div>
+
+        <section class="counter" aria-live="polite">
+          <span class="counter__number" id="totalCount">0</span>
+          <span class="counter__unit">杯</span>
+        </section>
+
+        <dl class="session-stats">
+          <div>
+            <dt>開始</dt>
+            <dd id="startedAt">--:--</dd>
+          </div>
+          <div>
+            <dt>経過</dt>
+            <dd id="elapsedTime">0分</dd>
+          </div>
+        </dl>
+
+        <div class="breakdown" id="breakdown" aria-label="酒種別杯数"></div>
+      </header>
+
+      <section class="comment-panel" aria-live="polite">
+        <p class="section-label">AI</p>
+        <p class="comment-text" id="commentText">1杯目を記録したら、ここで軽くツッコミます。</p>
+      </section>
+
+      <section class="drink-area" aria-labelledby="drinkButtonsHeading">
+        <h2 id="drinkButtonsHeading">お酒を追加</h2>
+        <div class="drink-grid" id="drinkGrid"></div>
+      </section>
+
+      <section class="history-area" aria-labelledby="historyHeading">
+        <div class="section-heading">
+          <h2 id="historyHeading">履歴</h2>
+          <span id="historyCount">0件</span>
+        </div>
+        <ol class="history-list" id="historyList"></ol>
+        <p class="empty-state" id="emptyState">まだ記録はありません。</p>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+      <span id="toastMessage"></span>
+      <button id="undoButton" type="button">取り消す</button>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
