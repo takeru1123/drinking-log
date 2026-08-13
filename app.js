@@ -15,6 +15,8 @@ const elements = {
   totalCount: document.querySelector("#totalCount"),
   startedAt: document.querySelector("#startedAt"),
   elapsedTime: document.querySelector("#elapsedTime"),
+  paceTime: document.querySelector("#paceTime"),
+  waterCount: document.querySelector("#waterCount"),
   breakdown: document.querySelector("#breakdown"),
   commentText: document.querySelector("#commentText"),
   drinkGrid: document.querySelector("#drinkGrid"),
@@ -71,8 +73,12 @@ function formatTime(value) {
 function formatElapsed(startedAt) {
   if (!startedAt) return "0分";
   const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 60000));
-  const hours = Math.floor(elapsedMinutes / 60);
-  const minutes = elapsedMinutes % 60;
+  return formatMinutes(elapsedMinutes);
+}
+
+function formatMinutes(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   if (hours === 0) return `${minutes}分`;
   return `${hours}時間${minutes}分`;
 }
@@ -87,6 +93,19 @@ function isAlcoholEntry(entry) {
 
 function getAlcoholEntries(entries = session.entries) {
   return entries.filter(isAlcoholEntry);
+}
+
+function getWaterCount(entries = session.entries) {
+  return entries.filter((entry) => entry.drinkType === "water").length;
+}
+
+function formatPace(alcoholEntries = getAlcoholEntries()) {
+  if (alcoholEntries.length === 0) return "--";
+  const latestEntry = alcoholEntries.reduce((latest, entry) =>
+    new Date(entry.timestamp) > new Date(latest.timestamp) ? entry : latest,
+  );
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(latestEntry.timestamp).getTime()) / 60000));
+  return formatMinutes(elapsedMinutes);
 }
 
 function getBreakdown(entries = session.entries) {
@@ -114,6 +133,8 @@ function render() {
   elements.totalCount.textContent = String(alcoholEntries.length);
   elements.startedAt.textContent = formatTime(session.startedAt);
   elements.elapsedTime.textContent = formatElapsed(session.startedAt);
+  elements.paceTime.textContent = formatPace(alcoholEntries);
+  elements.waterCount.textContent = `${getWaterCount()}回`;
   elements.commentText.textContent = session.lastComment;
   elements.historyCount.textContent = `${session.entries.length}件`;
 
@@ -203,7 +224,7 @@ function buildCommentContext(entry) {
   const minutesSincePrevious = previousEntry
     ? Math.max(0, Math.floor((new Date(entry.timestamp) - new Date(previousEntry.timestamp)) / 60000))
     : null;
-  const waterCount = session.entries.filter((item) => item.drinkType === "water").length;
+  const waterCount = getWaterCount();
 
   return {
     drink: getDrink(entry.drinkType),
