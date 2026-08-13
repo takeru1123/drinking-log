@@ -8,6 +8,7 @@ const drinks = [
   { id: "wine", label: "ワイン", emoji: "🍷" },
   { id: "sake", label: "日本酒", emoji: "🍶" },
   { id: "other", label: "その他", emoji: "🍸" },
+  { id: "water", label: "水", emoji: "💧", isAlcohol: false },
 ];
 
 const elements = {
@@ -80,8 +81,16 @@ function getDrink(id) {
   return drinks.find((drink) => drink.id === id) ?? drinks[drinks.length - 1];
 }
 
+function isAlcoholEntry(entry) {
+  return getDrink(entry.drinkType).isAlcohol !== false;
+}
+
+function getAlcoholEntries(entries = session.entries) {
+  return entries.filter(isAlcoholEntry);
+}
+
 function getBreakdown(entries = session.entries) {
-  return entries.reduce((result, entry) => {
+  return getAlcoholEntries(entries).reduce((result, entry) => {
     result[entry.drinkType] = (result[entry.drinkType] ?? 0) + 1;
     return result;
   }, {});
@@ -91,7 +100,7 @@ function renderDrinkButtons() {
   elements.drinkGrid.innerHTML = drinks
     .map(
       (drink) => `
-        <button class="drink-button" type="button" data-drink-id="${drink.id}" aria-label="${drink.label}を1杯追加">
+        <button class="drink-button" type="button" data-drink-id="${drink.id}" aria-label="${drink.label}を記録">
           <span class="drink-button__emoji" aria-hidden="true">${drink.emoji}</span>
           <span class="drink-button__label">${drink.label}</span>
         </button>
@@ -101,7 +110,8 @@ function renderDrinkButtons() {
 }
 
 function render() {
-  elements.totalCount.textContent = String(session.entries.length);
+  const alcoholEntries = getAlcoholEntries();
+  elements.totalCount.textContent = String(alcoholEntries.length);
   elements.startedAt.textContent = formatTime(session.startedAt);
   elements.elapsedTime.textContent = formatElapsed(session.startedAt);
   elements.commentText.textContent = session.lastComment;
@@ -130,6 +140,7 @@ function render() {
 }
 
 function addDrink(drinkId) {
+  const drink = getDrink(drinkId);
   const now = new Date().toISOString();
   const entry = {
     id: crypto.randomUUID(),
@@ -137,7 +148,7 @@ function addDrink(drinkId) {
     timestamp: now,
   };
 
-  if (!session.startedAt) {
+  if (drink.isAlcohol !== false && !session.startedAt) {
     session.startedAt = now;
   }
 
@@ -167,7 +178,8 @@ function undoLastEntry() {
   const entry = session.entries.find((item) => item.id === pendingUndoEntryId);
   session.entries = session.entries.filter((item) => item.id !== pendingUndoEntryId);
 
-  if (session.entries.length === 0) {
+  const alcoholEntries = getAlcoholEntries();
+  if (alcoholEntries.length === 0) {
     session.startedAt = null;
     session.lastComment = "1杯目を記録したら、ここで軽くツッコミます。";
   } else if (entry) {
@@ -182,7 +194,7 @@ function undoLastEntry() {
 }
 
 function buildCommentContext(entry) {
-  const sortedEntries = [...session.entries].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const sortedEntries = getAlcoholEntries().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   const currentIndex = sortedEntries.findIndex((item) => item.id === entry.id);
   const previousEntry = currentIndex > 0 ? sortedEntries[currentIndex - 1] : null;
   const elapsedMinutes = session.startedAt
@@ -191,13 +203,15 @@ function buildCommentContext(entry) {
   const minutesSincePrevious = previousEntry
     ? Math.max(0, Math.floor((new Date(entry.timestamp) - new Date(previousEntry.timestamp)) / 60000))
     : null;
+  const waterCount = session.entries.filter((item) => item.drinkType === "water").length;
 
   return {
     drink: getDrink(entry.drinkType),
-    totalCount: session.entries.length,
+    totalCount: getAlcoholEntries().length,
     elapsedMinutes,
     minutesSincePrevious,
     breakdown: getBreakdown(),
+    waterCount,
   };
 }
 
@@ -222,6 +236,11 @@ async function requestAiComment() {
 }
 
 function createLocalComment({ drink, totalCount, elapsedMinutes, minutesSincePrevious, breakdown }) {
+  if (drink.isAlcohol === false) {
+    if (totalCount === 0) return "水を先に入れるの、かなり堅実。今日は落ち着いていけそう。";
+    return `水をはさみました。${totalCount}杯目までの自分に、ちょっといいことした。`;
+  }
+
   if (totalCount === 1) {
     return `1杯目は${drink.label}。今日はゆっくりいこう。`;
   }
