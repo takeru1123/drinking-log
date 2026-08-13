@@ -1,5 +1,7 @@
 const STORAGE_KEY = "drinking-log:v0.1";
+const CONFIG_KEY = "drinking-log:config";
 const UNDO_TIMEOUT_MS = 5000;
+const AI_TIMEOUT_MS = 4500;
 
 const drinks = [
   { id: "beer", label: "ビール", emoji: "🍺" },
@@ -59,6 +61,23 @@ function loadSession() {
 
 function saveSession() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+}
+
+function getAiCommentEndpoint() {
+  const params = new URLSearchParams(window.location.search);
+  const endpointFromUrl = params.get("aiEndpoint");
+
+  if (endpointFromUrl) {
+    localStorage.setItem(CONFIG_KEY, JSON.stringify({ aiCommentEndpoint: endpointFromUrl }));
+    return endpointFromUrl;
+  }
+
+  try {
+    const config = JSON.parse(localStorage.getItem(CONFIG_KEY) || "{}");
+    return config.aiCommentEndpoint || "";
+  } catch {
+    return "";
+  }
 }
 
 function formatTime(value) {
@@ -252,8 +271,40 @@ async function updateComment(entry) {
   render();
 }
 
-async function requestAiComment() {
-  return null;
+async function requestAiComment(context) {
+  const endpoint = getAiCommentEndpoint();
+  if (!endpoint) return null;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        addedDrink: context.drink.label,
+        isAlcohol: context.drink.isAlcohol !== false,
+        totalCount: context.totalCount,
+        elapsedMinutes: context.elapsedMinutes,
+        minutesSincePrevious: context.minutesSincePrevious,
+        breakdown: Object.fromEntries(
+          Object.entries(context.breakdown).map(([drinkId, count]) => [getDrink(drinkId).label, count]),
+        ),
+        waterCount: context.waterCount,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const comment = typeof data.comment === "string" ? data.comment.trim() : "";
+    if (!comment || comment.length > 80) return null;
+    return comment;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function createLocalComment({ drink, totalCount, elapsedMinutes, minutesSincePrevious, breakdown }) {
