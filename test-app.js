@@ -46,6 +46,12 @@ undoLastEntry();
 if (session.entries.length !== 0) throw new Error("undo did not remove the entry");
 if (elements.totalCount.textContent !== "0") throw new Error("undo did not rerender total");
 
+addDrink("water");
+if (session.entries.length !== 1) throw new Error("water was not added");
+if (elements.totalCount.textContent !== "0") throw new Error("water counted as alcohol");
+if (session.startedAt !== null) throw new Error("water started the session");
+if (!elements.historyList.innerHTML.includes("水")) throw new Error("water did not render in history");
+
 addDrink("highball");
 addDrink("highball");
 if (!elements.breakdown.innerHTML.includes("ハイボール ×2")) {
