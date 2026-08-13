@@ -1,4 +1,5 @@
 const STORAGE_KEY = "drinking-log:v0.1";
+const PAST_LOGS_KEY = "drinking-log:past-logs:v0.1";
 const CONFIG_KEY = "drinking-log:config";
 const UNDO_TIMEOUT_MS = 5000;
 const AI_TIMEOUT_MS = 4500;
@@ -25,13 +26,17 @@ const elements = {
   historyList: document.querySelector("#historyList"),
   historyCount: document.querySelector("#historyCount"),
   emptyState: document.querySelector("#emptyState"),
+  pastLogList: document.querySelector("#pastLogList"),
+  pastLogCount: document.querySelector("#pastLogCount"),
+  pastEmptyState: document.querySelector("#pastEmptyState"),
   toast: document.querySelector("#toast"),
   toastMessage: document.querySelector("#toastMessage"),
   undoButton: document.querySelector("#undoButton"),
-  resetButton: document.querySelector("#resetButton"),
+  finishButton: document.querySelector("#finishButton"),
 };
 
 let session = loadSession();
+let pastLogs = loadPastLogs();
 let undoTimer = null;
 let pendingUndoEntryId = null;
 
@@ -59,8 +64,22 @@ function loadSession() {
   }
 }
 
+function loadPastLogs() {
+  try {
+    const raw = localStorage.getItem(PAST_LOGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function saveSession() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+}
+
+function savePastLogs() {
+  localStorage.setItem(PAST_LOGS_KEY, JSON.stringify(pastLogs));
 }
 
 function getAiCommentEndpoint() {
@@ -83,6 +102,17 @@ function getAiCommentEndpoint() {
 function formatTime(value) {
   if (!value) return "--:--";
   return new Intl.DateTimeFormat("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+}
+
+function formatDate(value) {
+  if (!value) return "--";
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -134,6 +164,13 @@ function getBreakdown(entries = session.entries) {
   }, {});
 }
 
+function createBreakdownText(breakdown) {
+  const parts = drinks
+    .filter((drink) => breakdown[drink.id])
+    .map((drink) => `${drink.label} ×${breakdown[drink.id]}`);
+  return parts.length ? parts.join("  ") : "お酒なし";
+}
+
 function renderDrinkButtons() {
   elements.drinkGrid.innerHTML = drinks
     .map(
@@ -156,6 +193,7 @@ function render() {
   elements.waterCount.textContent = `${getWaterCount()}回`;
   elements.commentText.textContent = session.lastComment;
   elements.historyCount.textContent = `${session.entries.length}件`;
+  renderPastLogs();
 
   const counts = getBreakdown();
   elements.breakdown.innerHTML = drinks
@@ -177,6 +215,29 @@ function render() {
     .join("");
 
   elements.emptyState.hidden = session.entries.length > 0;
+}
+
+function renderPastLogs() {
+  elements.pastLogCount.textContent = `${pastLogs.length}件`;
+  elements.pastEmptyState.hidden = pastLogs.length > 0;
+  elements.pastLogList.innerHTML = pastLogs
+    .slice(0, 10)
+    .map(
+      (log) => `
+        <li class="past-log-item">
+          <div class="past-log-item__top">
+            <span class="past-log-item__date">${formatDate(log.startedAt || log.endedAt)}</span>
+            <span class="past-log-item__total">${log.totalCount}杯</span>
+          </div>
+          <div class="past-log-item__meta">
+            <span>${formatMinutes(log.durationMinutes || 0)}</span>
+            <span>水 ${log.waterCount || 0}回</span>
+          </div>
+          <div class="past-log-item__breakdown">${createBreakdownText(log.breakdown || {})}</div>
+        </li>
+      `,
+    )
+    .join("");
 }
 
 function addDrink(drinkId) {
@@ -337,15 +398,35 @@ function createLocalComment({ drink, totalCount, elapsedMinutes, minutesSincePre
   return `${totalCount}杯目。いい感じに記録できてます。水も忘れずに。`;
 }
 
-function resetSession() {
+function createPastLogFromCurrentSession() {
+  const alcoholEntries = getAlcoholEntries();
+  const endedAt = new Date().toISOString();
+  const firstEntryAt = session.startedAt || session.entries[0]?.timestamp || endedAt;
+  const durationMinutes = Math.max(0, Math.floor((new Date(endedAt) - new Date(firstEntryAt)) / 60000));
+
+  return {
+    id: crypto.randomUUID(),
+    startedAt: session.startedAt,
+    endedAt,
+    durationMinutes,
+    totalCount: alcoholEntries.length,
+    waterCount: getWaterCount(),
+    breakdown: getBreakdown(),
+    entries: [...session.entries],
+  };
+}
+
+function finishSession() {
   if (session.entries.length === 0) return;
-  const ok = window.confirm("今日の記録をリセットしますか？");
+  const ok = window.confirm("今日の飲み会を終了して、過去ログに保存しますか？");
   if (!ok) return;
 
+  pastLogs = [createPastLogFromCurrentSession(), ...pastLogs].slice(0, 30);
   session = createEmptySession();
   pendingUndoEntryId = null;
   clearTimeout(undoTimer);
   elements.toast.hidden = true;
+  savePastLogs();
   saveSession();
   render();
 }
@@ -357,7 +438,7 @@ elements.drinkGrid.addEventListener("click", (event) => {
 });
 
 elements.undoButton.addEventListener("click", undoLastEntry);
-elements.resetButton.addEventListener("click", resetSession);
+elements.finishButton.addEventListener("click", finishSession);
 
 renderDrinkButtons();
 render();
