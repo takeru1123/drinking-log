@@ -21,7 +21,10 @@ global.localStorage = {
   getItem: (key) => (store.has(key) ? store.get(key) : null),
   setItem: (key, value) => store.set(key, value),
 };
-global.window = { confirm: () => true };
+global.window = {
+  confirm: () => true,
+  location: { search: "" },
+};
 global.setInterval = () => 0;
 global.clearTimeout = () => {};
 global.setTimeout = () => 0;
