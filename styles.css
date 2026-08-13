@@ -239,6 +239,52 @@ h2 {
   list-style: none;
 }
 
+.past-log-list {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.past-log-item {
+  display: grid;
+  gap: 7px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.past-log-item__top,
+.past-log-item__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.past-log-item__date {
+  color: var(--mint);
+  font-weight: 850;
+}
+
+.past-log-item__total {
+  color: var(--accent-strong);
+  font-weight: 900;
+}
+
+.past-log-item__meta {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.past-log-item__breakdown {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .history-item {
   display: grid;
   grid-template-columns: 56px 1fr;
